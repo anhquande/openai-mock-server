@@ -1,17 +1,16 @@
 import jsonServer from 'json-server';
 import { faker } from '@faker-js/faker';
 import { program } from 'commander';
+import e from 'express';
 
 const server = jsonServer.create();
-const router = jsonServer.router('openai-mock.json');
 const middlewares = jsonServer.defaults();
 
 server.use(middlewares);
-server.use(router);
 
 // Custom route to simulate the OpenAI API
-server.post('/v1/completions', (req, res) => {
-  const { prompt } = req.body;
+const handleOpenaiRequest = (req: e.Request, res: e.Response) => {
+  const { prompt } = req.body || { prompt: 'EMPTY' };
 
   // Generate a fake completion using faker
   const fakeCompletion = {
@@ -21,7 +20,7 @@ server.post('/v1/completions', (req, res) => {
     model: 'text-davinci-003',
     choices: [
       {
-        text: 'you asked ' + prompt + ' ' + faker.lorem.sentence(),
+        text: faker.lorem.sentence({ min: 3, max: 300 }),
         logprobs: null,
         finish_reason: 'length',
         index: 0
@@ -36,7 +35,15 @@ server.post('/v1/completions', (req, res) => {
 
   // Send the fake completion as the response
   res.json(fakeCompletion);
-});
+};
+
+server.post('/v1/completions', handleOpenaiRequest);
+server.get('/v1/completions', handleOpenaiRequest);
+
+const router = jsonServer.router('openai-mock.json');
+
+server.use(router);
+
 program
   .option('-p, --port <number>', 'Specify the port number')
   .parse(process.argv);
